@@ -1,7 +1,13 @@
 import axios from 'axios';
 import store from './redux/store';
 import { supabase } from './supabase.js';
-import { isGuestMode, generateGuestLeads } from './guestData.js';
+import {
+  isGuestMode,
+  generateGuestLeads,
+  generateGuestLeaderboard,
+  generateGuestPeriodWinners,
+  GUEST_AGENT,
+} from './guestData.js';
 
 const isDev = import.meta.env.MODE === 'development';
 
@@ -183,6 +189,10 @@ const getAccount = async ({ email }) => {
 };
 
 const getPremiumLeaderboard = async ({ startDate, endDate, agency }) => {
+  if (isGuestMode) {
+    return generateGuestLeaderboard();
+  }
+
   const options = {
     method: 'GET',
     url: '/leaderboard',
@@ -213,6 +223,10 @@ const getPremiumLeaderboard = async ({ startDate, endDate, agency }) => {
 };
 
 const getLeaderboardPeriodWinners = async ({ agency }) => {
+  if (isGuestMode) {
+    return generateGuestPeriodWinners();
+  }
+
   const options = {
     method: 'GET',
     url: '/leaderboard/period-winners',
@@ -586,6 +600,11 @@ const getAgent = async ({ data }) => {
 
   if (!id) {
     throw new Error('Missing UID');
+  }
+
+  // DEV ONLY: resolve a stand-in agent in guest mode so agent-gated queries run.
+  if (isGuestMode) {
+    return GUEST_AGENT;
   }
 
   // request config for compulife server
