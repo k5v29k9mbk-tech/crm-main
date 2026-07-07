@@ -1,6 +1,7 @@
 import axios from 'axios';
 import store from './redux/store';
 import { supabase } from './supabase.js';
+import { isGuestMode, generateGuestLeads } from './guestData.js';
 
 const isDev = import.meta.env.MODE === 'development';
 
@@ -75,6 +76,12 @@ const getClients = async () => {
 
 const getLeads = async ({ data }) => {
   console.log('Fetching leads with data:', data);
+
+  // DEV ONLY: in guest mode there is no backend, so return random leads
+  // client-side instead of calling the API.
+  if (isGuestMode) {
+    return generateGuestLeads();
+  }
 
   // request config for compulife server
   const options = {
