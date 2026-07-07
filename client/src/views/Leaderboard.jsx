@@ -62,7 +62,7 @@ const Leaderboard = () => {
   // Period winners are fixed calendar periods, independent of the date
   // selector — so they get their own stable query key and don't refetch when
   // the range above changes.
-  const { data: periodWinners } = useQuery({
+  const { data: periodWinners, isLoading: isPeriodLoading } = useQuery({
     queryKey: ['leaderboardPeriodWinners', agent?.org_id],
     queryFn: () => getLeaderboardPeriodWinners({ agency: agent?.org_id }),
     enabled: !!agent?.org_id,
@@ -106,10 +106,12 @@ const Leaderboard = () => {
         <PeriodWinnerCard
           eyebrow="Last Month's Champion"
           period={periodWinners?.lastMonth}
+          loading={isPeriodLoading}
         />
         <PeriodWinnerCard
           eyebrow="Last Week's Champion"
           period={periodWinners?.lastWeek}
+          loading={isPeriodLoading}
         />
       </Stack>
 
@@ -321,7 +323,7 @@ function PodiumCard({ row, rank }) {
   );
 }
 
-function PeriodWinnerCard({ eyebrow, period }) {
+function PeriodWinnerCard({ eyebrow, period, loading }) {
   const theme = useTheme();
   const gold = theme.palette.action?.main || '#D4AF37';
   const winner = period?.winner;
@@ -368,7 +370,20 @@ function PeriodWinnerCard({ eyebrow, period }) {
         </Typography>
       </Stack>
 
-      {winner ? (
+      {loading ? (
+        <Stack
+          direction='row'
+          alignItems='center'
+          spacing={1.5}
+          sx={{ position: 'relative' }}
+        >
+          <Skeleton variant='circular' width={48} height={48} />
+          <Box sx={{ flexGrow: 1 }}>
+            <Skeleton variant='text' width='60%' height={28} />
+            <Skeleton variant='text' width='40%' />
+          </Box>
+        </Stack>
+      ) : winner ? (
         <Stack
           direction='row'
           alignItems='center'

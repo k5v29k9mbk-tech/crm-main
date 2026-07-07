@@ -122,7 +122,8 @@ const getWinnerForRange = async (agents, agentIds, range) => {
     .select('writing_agent_id, premium_amount, split_agent_id, split_agent_share')
     .in('writing_agent_id', agentIds)
     .gte('sold_date', range.start)
-    .lte('sold_date', range.end);
+    .lte('sold_date', range.end)
+    .limit(50000);
 
   if (error) throw error;
 
@@ -136,7 +137,14 @@ const getWinnerForRange = async (agents, agentIds, range) => {
 };
 
 leaderboardRouter.get('/', async (req, res) => {
-  const { startDate, endDate, orgId } = req.query;
+  const { startDate, endDate } = req.query;
+  // Scope to the requester's own org — never trust a client-supplied orgId,
+  // or any authenticated agent could read another org's leaderboard.
+  const orgId = req.agent?.org_id;
+
+  if (!orgId) {
+    return res.status(403).json({ error: 'No organization for requester' });
+  }
 
   try {
     logger.log('Fetching premium leaderboard', {
@@ -172,7 +180,10 @@ leaderboardRouter.get('/', async (req, res) => {
       .select(
         'writing_agent_id, premium_amount, split_agent_id, split_agent_share',
       )
-      .in('writing_agent_id', agentIds);
+      .in('writing_agent_id', agentIds)
+      // Supabase caps results at 1000 rows by default; raise it so large orgs
+      // aren't silently truncated (matches team_leaderboard.js).
+      .limit(50000);
 
     if (startDate) query = query.gte('sold_date', startDate);
     if (endDate) query = query.lte('sold_date', endDate);
@@ -211,7 +222,12 @@ leaderboardRouter.get('/', async (req, res) => {
  * date range selected on the main leaderboard.
  */
 leaderboardRouter.get('/period-winners', async (req, res) => {
-  const { orgId } = req.query;
+  // Scope to the requester's own org — never trust a client-supplied orgId.
+  const orgId = req.agent?.org_id;
+
+  if (!orgId) {
+    return res.status(403).json({ error: 'No organization for requester' });
+  }
 
   try {
     logger.log('Fetching leaderboard period winners', {
