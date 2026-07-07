@@ -1,0 +1,99 @@
+// DeleteClientDialog.jsx
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Typography,
+  Stack,
+  Alert,
+  Checkbox,
+  FormControlLabel,
+} from '@mui/material';
+import { useState, useEffect } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import { enqueueSnackbar } from 'notistack';
+
+import { deleteClient } from '../utils/query';
+
+import { SNACKBAR_SUCCESS_OPTIONS } from '../utils/constants';
+
+const DeleteClientDialog = ({ open, setOpen, client, refetchClients }) => {
+  const [confirm, setConfirm] = useState(false);
+
+  useEffect(() => {
+    if (!open) setConfirm(false);
+  }, [open]);
+
+  const { mutate, isPending, isError, error } = useMutation({
+    mutationFn: deleteClient,
+    onSuccess: () => {
+      enqueueSnackbar('Client deleted successfully.', SNACKBAR_SUCCESS_OPTIONS);
+      refetchClients?.();
+      setOpen(false);
+    },
+  });
+
+  const handleDelete = () => {
+    if (!client?.id) return;
+    mutate({ data: { clientId: client.id } });
+  };
+
+  const fullName = client
+    ? `${client.first_name ?? ''} ${client.last_name ?? ''}`.trim()
+    : '';
+
+  return (
+    <Dialog open={open} onClose={() => setOpen(false)} maxWidth='sm' fullWidth>
+      <DialogTitle>Delete Client</DialogTitle>
+      <DialogContent>
+        <Stack spacing={2} sx={{ mt: 0.5 }}>
+          <Typography variant='body1'>
+            You’re about to permanently delete{' '}
+            <strong>{fullName || 'this client'}</strong>.
+          </Typography>
+          <Alert severity='warning'>
+            This action cannot be undone.{' '}
+            <strong>All associated policies</strong> will be deleted along with
+            the client.
+          </Alert>
+
+          {isError && (
+            <Alert severity='error'>
+              {error?.response?.status === 409
+                ? error?.response?.data?.error
+                : 'An error occurred while deleting the client.'}
+            </Alert>
+          )}
+
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={confirm}
+                onChange={(e) => setConfirm(e.target.checked)}
+              />
+            }
+            label='I understand this will permanently delete the client and all associated policies.'
+          />
+        </Stack>
+      </DialogContent>
+
+      <DialogActions sx={{ px: 3, pb: 2 }}>
+        <Button onClick={() => setOpen(false)} disabled={isPending}>
+          Cancel
+        </Button>
+        <Button
+          onClick={handleDelete}
+          color='error'
+          variant='contained'
+          disabled={!confirm || isPending}
+        >
+          {isPending ? 'Deleting…' : 'Delete Client'}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+export default DeleteClientDialog;
